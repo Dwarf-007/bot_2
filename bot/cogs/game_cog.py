@@ -63,36 +63,44 @@ class GameCog(commands.Cog):
             await ctx.send("Nincs aktív játék. Indítsd el a kampányt: `!campaign start`")
             return
 
-        # Use GameTurnService to process the move command
-        from services.game_turn_service import GameTurnService
-        from app.bootstrap import build_runtime
-        runtime = build_runtime()
-        game_turn_service = runtime.game_turn_service
+        # Use the existing session object to perform the move. Do NOT build a new runtime here;
+        # building a runtime would create a fresh state without the active session and cause
+        # inconsistent behavior between prefixed commands and plain messages.
+        result = session.move(direction, choice=choice)
 
-        # Process the move command through GameTurnService
-        output = game_turn_service.process(
-            channel_id=str(ctx.channel.id),
-            player_id=str(ctx.author.id),
-            text=f"move {direction}"
-        )
+        # Handle failure
+        if not result.get("ok"):
+            await ctx.send(f"❌ {result.get('message', 'Ismeretlen hiba.')}")
+            return
 
-        # Check if combat started and handle it
-        if output.public_narrative and "combat started" in output.public_narrative.lower():
-            # Extract combat narrative and commands from the output
-            combat_narrative = output.public_narrative
-            combat_commands = output.avrae_commands
+        # Success: send message and optional description
+        msg = result.get("message", "A művelet sikeres.")
+        desc = result.get("description", "")
+        if desc:
+            await ctx.send(f"{msg}\n\n{desc}")
+        else:
+            await ctx.send(msg)
 
-            # Send combat narrative
-            await ctx.send(combat_narrative)
-
-            # Send combat commands
-            for cmd in combat_commands:
+        # If combat started, send combat narrative and Avrae commands
+        if result.get("combat_started"):
+            combat_narr = result.get("combat_narrative", "")
+            if combat_narr:
+                await ctx.send(combat_narr)
+            for cmd in result.get("combat_commands", []):
                 await ctx.send(cmd)
 
-        # Send the turn output
-        from bot.discord_router import DiscordTurnRouter
-        discord_router = DiscordTurnRouter(game_turn_service)
-        await discord_router.send_turn_output(ctx, output)
+        # If there's room info, send it as embed
+        if result.get("node") or result.get("description") or result.get("exits") is not None or result.get("monsters") is not None:
+            room_info = {
+                "node": result.get("node", {}),
+                "description": result.get("description", ""),
+                "exits": result.get("exits", []),
+                "node_type": result.get("node_type", ""),
+                "monsters": result.get("monsters", []),
+            }
+            await self._send_room_info(ctx, room_info)
+
+        return
 
     # ------------------------------------------------------------------
     # !look
@@ -174,7 +182,7 @@ class GameCog(commands.Cog):
             await ctx.send("Nincs aktív játék.")
             return
         result = session.search(search_type=search_type)
-        await ctx.send(f"{'✅' if result.get('ok') else '❌'} {result.get('message', 'Ismeretlen hiba.')}")
+        await ctx.send(f"{ '✅' if result.get('ok') else '❌' } {result.get('message', 'Ismeretlen hiba.')}")
 
     # ------------------------------------------------------------------
     # !open
