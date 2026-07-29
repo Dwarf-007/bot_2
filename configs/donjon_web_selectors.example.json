@@ -1,0 +1,26 @@
+{
+  "generate_button": [
+    "input[type=submit][value*=Construct]",
+    "input[type=submit][value*=Generate]",
+    "button:has-text('Construct')",
+    "button:has-text('Generate')",
+    "input[type=submit]"
+  ],
+  "json_links": [
+    "a[href$='.json']",
+    "a:has-text('JSON')",
+    "a[href*='json']"
+  ],
+  "pdf_links": [
+    "a[href$='.pdf']",
+    "a:has-text('PDF')",
+    "a[href*='pdf']"
+  ],
+  "form_fields": {
+    "seed": ["input[name='seed']", "#seed"],
+    "dungeon_name": ["input[name='dungeon_name']", "input[name='name']", "#dungeon_name", "#name"],
+    "size": ["select[name='size']", "select[name='dungeon_size']", "#size"],
+    "layout": ["select[name='layout']", "select[name='dungeon_layout']", "#layout"],
+    "theme": ["select[name='theme']", "input[name='theme']", "#theme"]
+  }
+}

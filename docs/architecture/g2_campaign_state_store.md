@@ -1,0 +1,1 @@
+G2.2 stores campaign state and snapshots. Transition application arrives in G2.3.
